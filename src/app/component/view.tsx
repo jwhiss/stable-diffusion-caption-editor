@@ -78,12 +78,12 @@ export default function ImageViewArea(props: ImageViewAreaProps) {
 
       <input className="mt-4 bg-neutral-900 border-neutral-950 rounded border p-2 text-sm cursor-text overflow-x-auto" value={imageName} disabled={true}></input>
 
-      <div className="mt-4 rounded border bg-neutral-900 border-neutral-950 h-full flex-col overflow-hidden flex gap-2">
-        <div className="w-full p-2 rounded-xl h-full flex flex-col overflow-y-auto select-text">
-          <div className="flex flex-grow h-full flex-wrap content-start">
+      <div className="mt-4 rounded border bg-neutral-900 border-neutral-950 flex-grow min-h-0 flex-col flex gap-2">
+        <div className="w-full p-2 h-full flex flex-col overflow-hidden select-text">
+          <div className="flex flex-wrap content-start overflow-y-auto flex-grow h-0">
             {tagComponents}
           </div>
-          <form onSubmit={handleSubmit(onSubmit)} className="pt-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="pt-4 shrink-0">
             <input
               {...register("newTag")}
               className="bg-neutral-700 rounded h-9 w-full pl-3"

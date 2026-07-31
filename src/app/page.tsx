@@ -509,7 +509,7 @@ export default function Home() {
           </Split>
         </ul>
         <ul>
-          <div className="flex h-screen w-full flex-col bg-neutral-800 overflow-y-auto">
+          <div className="flex h-screen w-full flex-col bg-neutral-800 overflow-hidden">
             <ImageViewArea daggerImages={selectedImages}
               handleDeleteTagFromImage={handleDeleteTagFromImage}
               handleAddTagToImage={handleAddTagToImage}
