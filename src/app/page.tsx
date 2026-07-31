@@ -404,6 +404,20 @@ export default function Home() {
     setChanged(true)
   }
 
+  function handleClearAllImages() {
+    if (projectImages.length === 0) return;
+    if (!confirm(`Are you sure you want to clear all ${projectImages.length} images?`)) return;
+    setProjectImages([])
+    setLoaded(0)
+    setSelectedImages([])
+    setCurrentImages([])
+    setProjectTags([])
+    setSearchTags([])
+    setIgnoreTags([])
+    setLastClickedImage(null)
+    setChanged(false)
+  }
+
   const onDrop = useCallback((acceptedFiles: File[]) => {
     handleFileOpen(acceptedFiles)
   }, []);
@@ -433,7 +447,7 @@ export default function Home() {
       </div>
 
       <div className="flex min-h-screen flex-col w-[48px] p-1 bg-neutral-800 border-neutral-950 border-r">
-        <ToolBar handleOpenDirectory={handleOpenDirectory} handleSave={handleFileSave} layoutMode={layoutMode} setLayoutMode={setLayoutMode}></ToolBar>
+        <ToolBar handleOpenDirectory={handleOpenDirectory} handleSave={handleFileSave} layoutMode={layoutMode} setLayoutMode={setLayoutMode} handleClearAllImages={handleClearAllImages}></ToolBar>
       </div>
 
       <Split

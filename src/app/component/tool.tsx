@@ -1,8 +1,8 @@
-import { FolderRegular, SaveRegular, EditRegular, EyeRegular } from "@fluentui/react-icons";
+import { FolderRegular, SaveRegular, EditRegular, EyeRegular, DeleteRegular } from "@fluentui/react-icons";
 import Image from "next/image";
 import { Tooltip } from "react-tooltip";
 
-export default function ToolBar(props: { handleOpenDirectory: () => void, handleSave: () => void, layoutMode: 'view' | 'edit', setLayoutMode: (mode: 'view' | 'edit') => void }) {
+export default function ToolBar(props: { handleOpenDirectory: () => void, handleSave: () => void, layoutMode: 'view' | 'edit', setLayoutMode: (mode: 'view' | 'edit') => void, handleClearAllImages: () => void }) {
   return (
     <div className="flex flex-col items-center justify-between flex-grow pt-2 text-neutral-300">
       <Tooltip id="tooltip_tb" place="right" />
@@ -30,6 +30,14 @@ export default function ToolBar(props: { handleOpenDirectory: () => void, handle
           className={"cursor-pointer rounded hover:bg-neutral-700 " + (props.layoutMode === 'edit' ? "bg-neutral-700 text-sky-400" : "")}
         >
           {props.layoutMode === 'view' ? <EditRegular fontSize={34} /> : <EyeRegular fontSize={34} />}
+        </div>
+        <div
+          data-tooltip-id="tooltip_tb"
+          data-tooltip-content="Clear All Images"
+          onClick={props.handleClearAllImages}
+          className="cursor-pointer rounded hover:bg-neutral-700"
+        >
+          <DeleteRegular fontSize={34} />
         </div>
       </div>
       <div className="flex flex-col mb-2 text-neutral-300 items-center">
