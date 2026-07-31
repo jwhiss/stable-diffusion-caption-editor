@@ -17,10 +17,12 @@ interface TagViewProps {
   layoutMode: 'view' | 'edit'
   selectedImages: DaggerImage[]
   handleAddTagToSelectedImages: (tag: string) => void
+  handleRemoveTagFromSelectedImages: (tag: TagStatistics) => void
 }
 
 export default function TagView(props: TagViewProps) {
   const [tagSearch, setTagSearch] = useState<string>("")
+  const [editAction, setEditAction] = useState<'add' | 'remove'>('add')
   const filterMode = !props.isTaggingMode
 
   const addTags = props.tagStatistics.filter(t => {
@@ -28,16 +30,26 @@ export default function TagView(props: TagViewProps) {
     return props.selectedImages.some(img => !img.caption.asTag().find(tag => tag.value() === t.value()))
   }).filter(t => t.value().includes(tagSearch));
 
+  const removeTags = props.tagStatistics.filter(t => {
+    if (props.selectedImages.length === 0) return false;
+    return props.selectedImages.some(img => img.caption.asTag().find(tag => tag.value() === t.value()))
+  }).filter(t => t.value().includes(tagSearch));
+
   return (
     <div className="flex flex-col pl-4 w-full pt-2 bg-neutral-800 overflow-hidden select-none">
       <div className="flex pb-2 justify-between">
-        <div className="">
+        <div className="flex gap-4">
           {props.layoutMode === 'view' ? (
-            <button className={"" + (filterMode && "border-b border-sky-500")}
+            <button className={filterMode ? "text-white border-b border-sky-500" : "text-neutral-400"}
                     onClick={() => props.toggleFilterMode(true)}>FILTER BY TAGS
             </button>
           ) : (
-            <button className={"border-b border-sky-500"}>ADD TAGS</button>
+            <>
+              <button className={editAction === 'add' ? "text-white border-b border-sky-500" : "text-neutral-400"}
+                      onClick={() => setEditAction('add')}>ADD TAGS</button>
+              <button className={editAction === 'remove' ? "text-white border-b border-sky-500" : "text-neutral-400"}
+                      onClick={() => setEditAction('remove')}>REMOVE TAGS</button>
+            </>
           )}
         </div>
         <div className="pr-4">
@@ -63,12 +75,16 @@ export default function TagView(props: TagViewProps) {
               :
               <></>
           ) : (
-            <TagCloud tagStatistics={addTags}
+            <TagCloud tagStatistics={editAction === 'add' ? addTags : removeTags}
                       ignoreTags={[]}
                       searchTags={[]}
                       handleTagSelect={(t) => {
                         if (t) {
-                          props.handleAddTagToSelectedImages(t.value());
+                          if (editAction === 'add') {
+                            props.handleAddTagToSelectedImages(t.value());
+                          } else {
+                            props.handleRemoveTagFromSelectedImages(t);
+                          }
                         }
                       }}
                       ctrlMode={false}

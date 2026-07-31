@@ -503,6 +503,7 @@ export default function Home() {
                 layoutMode={layoutMode}
                 selectedImages={selectedImages}
                 handleAddTagToSelectedImages={handleAddTagToImage(selectedImages)}
+                handleRemoveTagFromSelectedImages={(t) => handleDeleteTagFromImage(selectedImages)(t.getTag())}
               />
             </ul>
           </Split>
