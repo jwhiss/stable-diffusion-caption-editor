@@ -1,23 +1,23 @@
 "use client"
 
-import {open} from '@tauri-apps/api/dialog';
+import { open } from '@tauri-apps/api/dialog';
 import ProjectFile from "@/app/component/project";
 import ImageViewArea from "@/app/component/view";
 import ToolBar from "@/app/component/tool";
-import {DaggerImage, Tag, TagStatistics} from "@/domain/data";
+import { DaggerImage, Tag, TagStatistics } from "@/domain/data";
 import 'react-image-crop/dist/ReactCrop.css';
 import TagView from "@/app/component/tag";
-import {useCallback, useEffect, useState} from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   findCaptionFileByImageName,
   isCaptionFile,
   isImageFile,
   readImageWithCaptionFiles
 } from "@/util/util";
-import {downloadAsZip} from "@/util/zip";
+import { downloadAsZip } from "@/util/zip";
 import Split from "react-split";
 import CropViewArea from "@/app/component/crop";
-import {useDropzone} from "react-dropzone";
+import { useDropzone } from "react-dropzone";
 
 export default function Home() {
   const [projectImages, setProjectImages] = useState<DaggerImage[]>([])
@@ -35,6 +35,7 @@ export default function Home() {
   const [changed, setChanged] = useState(false)
   const [inCropMode, setInCropMode] = useState<DaggerImage | null>(null)
   const [lastLoadedImage, setLastLoadedImage] = useState<DaggerImage | null>(null)
+  const [layoutMode, setLayoutMode] = useState<'view' | 'edit'>('view')
 
 
   const enableTagCloud = true
@@ -162,7 +163,7 @@ export default function Home() {
   function handleOpenDirectory() {
     // @ts-ignore
     if (window.__TAURI_IPC__) {
-      open({multiple: true, directory: false})
+      open({ multiple: true, directory: false })
         .then(str => {
           if (!str) return
           if (Array.isArray(str)) {
@@ -323,9 +324,30 @@ export default function Home() {
     }
   }
 
-  async function handleFileSaveAsZip() {
-    await downloadAsZip(selectedImages.length === 0 ? projectImages : selectedImages)
-    setChanged(false)
+  async function handleFileSave() {
+    // @ts-ignore
+    if (window.__TAURI_IPC__) {
+      const { writeBinaryFile, writeTextFile } = await import('@tauri-apps/api/fs');
+      const targets = selectedImages.length === 0 ? projectImages : selectedImages;
+      for (const image of targets) {
+        if (!image.realPath) continue;
+
+        const { imageBlob, caption } = image.export();
+
+        if (imageBlob) {
+          const buffer = await imageBlob.arrayBuffer();
+          await writeBinaryFile(image.realPath, new Uint8Array(buffer));
+        }
+
+        const fileNameWithoutExt = image.realPath.substring(0, image.realPath.lastIndexOf('.'));
+        const captionPath = fileNameWithoutExt + '.txt';
+        await writeTextFile(captionPath, caption);
+      }
+      setChanged(false)
+    } else {
+      await downloadAsZip(selectedImages.length === 0 ? projectImages : selectedImages)
+      setChanged(false)
+    }
   }
 
   function handleDeleteTagFromProject(tag: TagStatistics) {
@@ -386,7 +408,7 @@ export default function Home() {
     handleFileOpen(acceptedFiles)
   }, []);
 
-  const {getRootProps, getInputProps} = useDropzone({onDrop, noClick: true});
+  const { getRootProps, getInputProps } = useDropzone({ onDrop, noClick: true });
 
   const overlayBaseCls = "flex justify-center items-center absolute h-screen w-screen bg-neutral-900 bg-opacity-70 z-10 p-10"
   return (
@@ -402,16 +424,16 @@ export default function Home() {
       <div className={overlayBaseCls + (inCropMode ? "" : " hidden")}>
         {
           inCropMode &&
-            <CropViewArea
-                daggerImage={inCropMode}
-                handleCancelCrop={() => setInCropMode(null)}
-                handleSaveCrop={handleSaveCrop}
-            />
+          <CropViewArea
+            daggerImage={inCropMode}
+            handleCancelCrop={() => setInCropMode(null)}
+            handleSaveCrop={handleSaveCrop}
+          />
         }
       </div>
 
       <div className="flex min-h-screen flex-col w-[48px] p-1 bg-neutral-800 border-neutral-950 border-r">
-        <ToolBar handleOpenDirectory={handleOpenDirectory} handleSaveAsZip={handleFileSaveAsZip}></ToolBar>
+        <ToolBar handleOpenDirectory={handleOpenDirectory} handleSave={handleFileSave} layoutMode={layoutMode} setLayoutMode={setLayoutMode}></ToolBar>
       </div>
 
       <Split
@@ -440,30 +462,33 @@ export default function Home() {
             <ul className="overflow-y-auto overflow-x-hidden" {...getRootProps()}>
               <input {...getInputProps()} />
               <ProjectFile handleOpenImage={handleOpenImage}
-                           selectedImages={selectedImages}
-                           currentImages={currentImages}
-                           images={projectImages}
-                           searchTags={searchTags}
-                           ignoreTags={ignoreTags}
-                           shiftMode={shiftMode}
-                           ctrlMode={ctrlMode}
-                           setCtrlMode={setCtrlMode}
-                           setShiftMode={setShiftMode}
-                           handleRemoveTagFromFilter={handleRemoveTagFromFilter}
+                selectedImages={selectedImages}
+                currentImages={currentImages}
+                images={projectImages}
+                searchTags={searchTags}
+                ignoreTags={ignoreTags}
+                shiftMode={shiftMode}
+                ctrlMode={ctrlMode}
+                setCtrlMode={setCtrlMode}
+                setShiftMode={setShiftMode}
+                handleRemoveTagFromFilter={handleRemoveTagFromFilter}
               />
             </ul>
             <ul className="flex overflow-hidden">
               <TagView tagStatistics={projectTags}
-                       toggleFilterMode={() => setTaggingMode(false)}
-                       handleToggleTaggingTags={handleToggleTaggingTags}
-                       searchTags={searchTags}
-                       ignoreTags={ignoreTags}
-                       ctrlMode={ctrlMode}
-                       handleTagSelect={handleTagSelect}
-                       toggleTaggingMode={handleToggleTaggingMode}
-                       isTaggingMode={taggingMode}
-                       taggingTags={taggingTags}
-                       handleDeleteTagFromProject={handleDeleteTagFromProject}
+                toggleFilterMode={() => setTaggingMode(false)}
+                handleToggleTaggingTags={handleToggleTaggingTags}
+                searchTags={searchTags}
+                ignoreTags={ignoreTags}
+                ctrlMode={ctrlMode}
+                handleTagSelect={handleTagSelect}
+                toggleTaggingMode={handleToggleTaggingMode}
+                isTaggingMode={taggingMode}
+                taggingTags={taggingTags}
+                handleDeleteTagFromProject={handleDeleteTagFromProject}
+                layoutMode={layoutMode}
+                selectedImages={selectedImages}
+                handleAddTagToSelectedImages={handleAddTagToImage(selectedImages)}
               />
             </ul>
           </Split>
@@ -471,10 +496,10 @@ export default function Home() {
         <ul>
           <div className="flex h-screen w-full flex-col bg-neutral-800 overflow-y-auto">
             <ImageViewArea daggerImages={selectedImages}
-                           handleDeleteTagFromImage={handleDeleteTagFromImage}
-                           handleAddTagToImage={handleAddTagToImage}
-                           setInCropMode={(img) => setInCropMode(img)}
-                           handleDeleteImageFromProject={handleDeleteImageFromProject}
+              handleDeleteTagFromImage={handleDeleteTagFromImage}
+              handleAddTagToImage={handleAddTagToImage}
+              setInCropMode={(img) => setInCropMode(img)}
+              handleDeleteImageFromProject={handleDeleteImageFromProject}
             />
           </div>
         </ul>

@@ -1,4 +1,4 @@
-import {TagStatistics} from "@/domain/data";
+import {TagStatistics, DaggerImage} from "@/domain/data";
 import {useState} from "react";
 import {DismissRegular} from "@fluentui/react-icons";
 
@@ -14,22 +14,31 @@ interface TagViewProps {
   taggingTags: string[]
   searchTags: string[]
   ignoreTags: string[]
+  layoutMode: 'view' | 'edit'
+  selectedImages: DaggerImage[]
+  handleAddTagToSelectedImages: (tag: string) => void
 }
 
 export default function TagView(props: TagViewProps) {
   const [tagSearch, setTagSearch] = useState<string>("")
   const filterMode = !props.isTaggingMode
 
+  const addTags = props.tagStatistics.filter(t => {
+    if (props.selectedImages.length === 0) return false;
+    return props.selectedImages.some(img => !img.caption.asTag().find(tag => tag.value() === t.value()))
+  }).filter(t => t.value().includes(tagSearch));
+
   return (
     <div className="flex flex-col pl-4 w-full pt-2 bg-neutral-800 overflow-hidden select-none">
       <div className="flex pb-2 justify-between">
         <div className="">
-          <button className={"" + (filterMode && "border-b border-sky-500")}
-                  onClick={() => props.toggleFilterMode(true)}>FILTER BY TAGS
-          </button>
-          {/*<button className={"ml-4 " + (taggingMode && "border-b border-sky-500")}*/}
-          {/*        onClick={() => props.toggleTaggingMode(true)}>CLICK TAGGING*/}
-          {/*</button>*/}
+          {props.layoutMode === 'view' ? (
+            <button className={"" + (filterMode && "border-b border-sky-500")}
+                    onClick={() => props.toggleFilterMode(true)}>FILTER BY TAGS
+            </button>
+          ) : (
+            <button className={"border-b border-sky-500"}>ADD TAGS</button>
+          )}
         </div>
         <div className="pr-4">
           <input placeholder={"Search"}
@@ -42,16 +51,30 @@ export default function TagView(props: TagViewProps) {
 
       <div className="w-full overflow-y-auto">
         {
-          filterMode ?
-            <TagCloud tagStatistics={props.tagStatistics.filter((t: TagStatistics) => t.value().includes(tagSearch))}
-                      ignoreTags={props.ignoreTags}
-                      searchTags={props.searchTags}
-                      handleTagSelect={props.handleTagSelect}
-                      ctrlMode={props.ctrlMode}
-                      handleDeleteTagFromProject={props.handleDeleteTagFromProject}
+          props.layoutMode === 'view' ? (
+            filterMode ?
+              <TagCloud tagStatistics={props.tagStatistics.filter((t: TagStatistics) => t.value().includes(tagSearch))}
+                        ignoreTags={props.ignoreTags}
+                        searchTags={props.searchTags}
+                        handleTagSelect={props.handleTagSelect}
+                        ctrlMode={props.ctrlMode}
+                        handleDeleteTagFromProject={props.handleDeleteTagFromProject}
+              />
+              :
+              <></>
+          ) : (
+            <TagCloud tagStatistics={addTags}
+                      ignoreTags={[]}
+                      searchTags={[]}
+                      handleTagSelect={(t) => {
+                        if (t) {
+                          props.handleAddTagToSelectedImages(t.value());
+                        }
+                      }}
+                      ctrlMode={false}
+                      handleDeleteTagFromProject={() => {}}
             />
-            :
-            <></>
+          )
         }
       </div>
 
