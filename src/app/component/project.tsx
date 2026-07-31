@@ -2,12 +2,12 @@ import {DaggerImage} from "@/domain/data";
 import React, {useState} from "react";
 import {
   ControlButtonFilled, ControlButtonRegular,
-  DismissRegular,
   KeyboardShiftFilled, KeyboardShiftRegular,
-  WrenchFilled, WrenchRegular,
   ZoomInRegular,
   ZoomOutRegular
 } from "@fluentui/react-icons";
+import {ImageCard} from "@/app/component/ui/ImageCard";
+import {FilterTagView} from "@/app/component/ui/FilterTagView";
 
 export interface ProjectFileProps {
   handleOpenImage: (daggerImage: DaggerImage | null) => void
@@ -78,85 +78,4 @@ export default function ProjectFile(props: ProjectFileProps) {
   )
 }
 
-interface FilterTagView {
-  handleRemoveTagFromFilter: (tag: string) => void
-  tags: string[]
-  color: "red" | "blue"
-  join: string
-}
 
-function FilterTagView(props: FilterTagView) {
-  const tagCloudElm = props.tags.map((t: string, i, l) => {
-    let clsName = "flex box-border border rounded-2xl p-1 pl-2 pr-2 m-1 select-none text-sm cursor-pointer whitespace-nowrap hover:bg-neutral-800 "
-    if (props.color === "blue") {
-      clsName += "bg-neutral-900 border-blue-600"
-    } else if (props.color === "red") {
-      clsName += "bg-neutral-900 border-red-500"
-    } else {
-      clsName += "bg-neutral-900 border-neutral-600"
-    }
-
-    return (
-      <div key={t} className="flex items-center">
-        <div
-          className={clsName}
-          key={t}
-          onClick={(e) => {
-            e.stopPropagation()
-            // props.handleTagDelete(t)
-          }}
-        >
-          {t}
-          <div
-            onClick={() => {
-              props.handleRemoveTagFromFilter(t)
-            }}
-            className="relative left-1 flex w-5 justify-center items-center text-xs bg-neutral-800 rounded-full hover:bg-red-500"
-          >
-            <DismissRegular></DismissRegular>
-          </div>
-        </div>
-        {i !== l.length - 1 ? <p className="text-neutral-400 text-sm">{props.join}</p> : ""}
-      </div>
-    )
-  })
-
-  return (
-    <div className="flex items-center">
-      {tagCloudElm}
-    </div>
-  )
-}
-
-export function ImageCard({img, handler, isCurrent, visible, size}: {
-  img: DaggerImage,
-  isCurrent: boolean,
-  handler: (img: DaggerImage) => void
-  visible: boolean
-  size: number
-}) {
-  let cls = `flex flex-col content-between overflow-hidden mt-3 hover:bg-neutral-800 shrink-0`
-  if (!visible) cls += " hidden"
-
-  return (
-    <div className={cls} style={{width: `${size}px`, height: `${size + 40}px`}}
-         onMouseDown={(e) => {
-           e.stopPropagation();
-           handler(img)
-         }}
-         onDoubleClick={(e) => {
-           e.stopPropagation();
-           window.open(img.url, '_blank')
-         }}
-    >
-      <div
-        className={`flex justify-center m-1 overflow-hidden shrink-0 items-center ` + (isCurrent ? "border-sky-500 border-2" : "")}
-        style={{height: `${size}px`}}>
-        <img className={"object-cover pointer-events-none"} onDragStart={(e) => e.stopPropagation()} src={img.thumbnailUrl} alt={img.caption.value}></img>
-      </div>
-      <div className="flex justify-center text-sm pt-2">
-        <p className="overflow-ellipsis max-w-[128px] overflow-hidden whitespace-nowrap">{img.fileName}</p>
-      </div>
-    </div>
-  )
-}

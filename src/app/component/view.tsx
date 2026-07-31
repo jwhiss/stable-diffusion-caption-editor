@@ -1,6 +1,8 @@
 import {DaggerImage, Tag} from "@/domain/data";
-import {CropSparkle24Filled, DeleteRegular, DismissRegular} from "@fluentui/react-icons";
+import {CropSparkle24Filled, DeleteRegular} from "@fluentui/react-icons";
 import {useForm} from "react-hook-form";
+import {TagSelector} from "@/app/component/ui/TagSelector";
+import {Promotion} from "@/app/component/ui/Promotion";
 
 interface ImageViewAreaProps {
   daggerImages: DaggerImage[]
@@ -93,57 +95,6 @@ export default function ImageViewArea(props: ImageViewAreaProps) {
           </form>
         </div>
       </div>
-    </div>
-  )
-}
-
-export function TagSelector(props: { tag: Tag, selected: boolean, handleDeleteTagFromImage: (tag: Tag) => void }) {
-  let className = "flex border bg-neutral-900 border-neutral-600 rounded-2xl p-1 pl-2 pr-2 m-1 text-sm"
-  if (props.selected) {
-    className += " "
-  }
-
-  return(
-    <div className={className}>
-      {props.tag.value()}
-      <div
-        onClick={() => {
-          props.handleDeleteTagFromImage(props.tag)
-        }}
-        className="relative left-1 flex w-5 justify-center items-center text-xs bg-neutral-800 rounded-full cursor-pointer hover:bg-red-500"
-      >
-        <DismissRegular></DismissRegular>
-      </div>
-    </div>
-  )
-}
-
-export function Promotion() {
-  return (
-    <div className="flex flex-col items-center justify-center space-y-6 p-10 bg-gradient-to-r w-full text-white rounded-md">
-      <div className="text-3xl font-bold animate-pulse text-center">Dagger️</div>
-      <div>🗡️</div>
-      <div className="text-xl">
-        <p>Get started by importing your image and caption files.</p>
-      </div>
-      <div className="text-lg">
-        <p>Please see the <a className="underline" href="https://github.com/kznrluk/dagger">README</a> for detailed usage instructions.</p>
-        <p>We welcome your contributions and feedback. Please feel free to submit issues and pull requests on our <a className="underline" href="https://github.com/kznrluk/dagger">GitHub repository</a>.</p>
-      </div>
-      <div className="flex flex-col gap-2 text-center">
-        <ShortcutIcon name="CTRL + Click" description="Select multiple" />
-        <ShortcutIcon name="SHIFT + Click" description="Select in a row" />
-        <ShortcutIcon name="CTRL + A" description="Select all" />
-      </div>
-    </div>
-  )
-}
-
-export function ShortcutIcon(props: { name: string, description: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center border border-white rounded p-2">
-      <p className="font-bold">{props.name}</p>
-      <p>{props.description}</p>
     </div>
   )
 }

@@ -18,23 +18,44 @@ import { downloadAsZip } from "@/util/zip";
 import Split from "react-split";
 import CropViewArea from "@/app/component/crop";
 import { useDropzone } from "react-dropzone";
+import { useKeyboardShortcuts } from "@/app/hooks/useKeyboardShortcuts";
+import { useTagFilters } from "@/app/hooks/useTagFilters";
+import { useProjectState } from "@/app/hooks/useProjectState";
+import { saveImages } from "@/util/fileSystem";
 
 export default function Home() {
-  const [projectImages, setProjectImages] = useState<DaggerImage[]>([])
+  const {
+    projectImages,
+    setProjectImages,
+    selectedImages,
+    setSelectedImages,
+    projectTags,
+    loaded,
+    changed,
+    setChanged,
+    lastClickedImage,
+    setLastClickedImage,
+    inCropMode,
+    setInCropMode,
+    handleDeleteImageFromProject,
+    handleClearAllImages,
+    handleSaveCrop,
+    handleDeleteTagFromProject,
+    handleDeleteTagFromImage,
+    handleAddTagToImage,
+    handleOpenImage,
+  } = useProjectState();
+
   const [currentImages, setCurrentImages] = useState<DaggerImage[]>([])
-  const [selectedImages, setSelectedImages] = useState<DaggerImage[]>([])
-  const [projectTags, setProjectTags] = useState<TagStatistics[]>([])
-  const [loaded, setLoaded] = useState(0)
   const [shiftMode, setShiftMode] = useState(false)
-  const [lastClickedImage, setLastClickedImage] = useState<DaggerImage | null>(null)
   const [ctrlMode, setCtrlMode] = useState(false)
   const [taggingMode, setTaggingMode] = useState(false)
   const [taggingTags, setTaggingTags] = useState<string[]>([])
-  const [searchTags, setSearchTags] = useState<string[]>([])
-  const [ignoreTags, setIgnoreTags] = useState<string[]>([])
-  const [changed, setChanged] = useState(false)
-  const [inCropMode, setInCropMode] = useState<DaggerImage | null>(null)
-  const [lastLoadedImage, setLastLoadedImage] = useState<DaggerImage | null>(null)
+  const { searchTags, setSearchTags, ignoreTags, setIgnoreTags } = useTagFilters({
+    projectImages,
+    setCurrentImages,
+    setSelectedImages,
+  })
   const [layoutMode, setLayoutMode] = useState<'view' | 'edit'>('view')
 
 
@@ -55,110 +76,22 @@ export default function Home() {
     }
   }, [changed]);
 
-  useEffect(() => {
-    const loadingImages = projectImages.filter(image => !image.isLoaded)
-    const loadedImage = projectImages.filter(image => image.isLoaded)
-
-    for (const image of loadingImages) {
-      if (!image.isLoaded) {
-        image.asyncLoad().then(() => {
-          setLastLoadedImage(image)
-        })
-      }
-    }
-
-    setLoaded(() => loadedImage.length)
-  }, [loaded, projectImages, lastLoadedImage])
-
-  useEffect(() => {
-    if (projectImages.length === 0) {
-      setProjectTags([])
-    }
-
-    if (!enableTagCloud || loaded !== projectImages.length) {
-      return
-    }
-
-    const prev: TagStatistics[] = []
-    for (const image of projectImages) {
-      if (!image.isLoaded) {
-        continue
-      }
-      for (const tag of image.caption.asTag()) {
-        const tagStat = prev.find(t => t.value() === tag.value())
-        if (tagStat) {
-          tagStat.increment()
-        } else {
-          prev.push(new TagStatistics(tag, 1))
-        }
-      }
-      prev.sort((a, b) => b.count() - a.count())
-      setProjectTags(prev)
-    }
-  }, [loaded, projectImages])
 
 
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Shift") {
-        if (!lastClickedImage) {
-          setLastClickedImage(selectedImages[selectedImages.length - 1])
-        }
-        setShiftMode(true)
-      }
-      if (e.key === "Control") {
-        setCtrlMode(true)
-      }
-      if (e.key === "a" && ctrlMode) {
-        e.stopPropagation()
-        setSelectedImages(currentImages)
-      }
-      if (e.key === "Enter") {
-        // e.stopPropagation()
-        // if (inputRef.current) {
-        //   inputRef.current.focus()
-        // }
-      }
-      if (e.key === "Delete") {
-        handleDeleteImageFromProject(selectedImages)
-      }
-    }
 
-    function handleKeyUp(e: KeyboardEvent) {
-      if (e.key === "Shift") {
-        setShiftMode(false)
-      }
-      if (e.key === "Control") {
-        setCtrlMode(false)
-      }
-    }
+  useKeyboardShortcuts({
+    lastClickedImage,
+    setLastClickedImage,
+    selectedImages,
+    setSelectedImages,
+    currentImages,
+    shiftMode,
+    setShiftMode,
+    ctrlMode,
+    setCtrlMode,
+    handleDeleteImageFromProject,
+  });
 
-    document.onkeyup = handleKeyUp
-    document.onkeydown = handleKeyDown
-  }, [shiftMode, ctrlMode, selectedImages])
-
-  useEffect(() => {
-    const anySelectedTags = searchTags.length !== 0 || ignoreTags.length !== 0
-    if (!anySelectedTags) {
-      setCurrentImages(projectImages)
-      return
-    }
-
-    const showImages: DaggerImage[] = []
-    for (const image of projectImages) {
-      const isSearchTarget = searchTags.every(t => image.caption.asTag().find(tag => tag.value() === t))
-      const isIgnoreTarget = ignoreTags.some(t => image.caption.asTag().find(tag => tag.value() === t))
-      const shouldShow = (isSearchTarget && !isIgnoreTarget)
-
-      if (shouldShow) {
-        showImages.push(image)
-      }
-    }
-    setCurrentImages(showImages)
-    if (showImages.length !== 0) {
-      setSelectedImages([showImages[0]])
-    }
-  }, [searchTags, ignoreTags, projectImages])
 
   function handleOpenDirectory() {
     // @ts-ignore
@@ -207,34 +140,8 @@ export default function Home() {
   }
 
 
-  function handleOpenImage(image: DaggerImage | null) {
-    if ((shiftMode || ctrlMode) && !image) {
-      return;
-    }
-
-    if (!image) {
-      setSelectedImages([])
-      return
-    }
-
-    if (ctrlMode) {
-      if (selectedImages.find(i => i === image)) {
-        setSelectedImages(selectedImages.filter(i => i !== image))
-      } else {
-        setSelectedImages([...selectedImages, image])
-      }
-    } else {
-      setSelectedImages([image])
-    }
-
-    if (lastClickedImage && shiftMode) {
-      const startIndex = projectImages.findIndex(i => i === lastClickedImage)
-      const endIndex = projectImages.findIndex(i => i === image)
-      const newCurrentImages = projectImages.slice(Math.min(startIndex, endIndex), Math.max(startIndex, endIndex) + 1)
-      setSelectedImages(newCurrentImages.filter(i => currentImages.find(s => s === i)))
-    } else {
-      setLastClickedImage(image)
-    }
+  function handleOpenImageWrapped(image: DaggerImage | null) {
+    handleOpenImage(image, shiftMode, ctrlMode, currentImages);
   }
 
   function handleTagSelect(tag: TagStatistics | null) {
@@ -285,31 +192,7 @@ export default function Home() {
     }
   }
 
-  function handleDeleteTagFromImage(images: DaggerImage[]) {
-    return (tag: Tag) => {
-      setProjectImages((prev) => {
-        return prev.map(i => {
-          if (images.find(img => img === i)) {
-            i.caption.deleteTag(tag)
-          }
-          return i
-        })
-      })
 
-      setChanged(true)
-    }
-  }
-
-
-  function handleAddTagToImage(images: DaggerImage[]) {
-    return (tag: string) => {
-      for (const image of images) {
-        image.caption.addTag(tag)
-      }
-      setProjectImages([...projectImages])
-      setChanged(true)
-    }
-  }
 
   function handleToggleTaggingMode(bool: boolean) {
     setTaggingMode(bool)
@@ -326,97 +209,14 @@ export default function Home() {
 
   async function handleFileSave() {
     // @ts-ignore
-    if (window.__TAURI_IPC__) {
-      const { writeBinaryFile, writeTextFile } = await import('@tauri-apps/api/fs');
-      const targets = selectedImages.length === 0 ? projectImages : selectedImages;
-      for (const image of targets) {
-        if (!image.realPath) continue;
-
-        const { imageBlob, caption } = image.export();
-
-        if (imageBlob) {
-          const buffer = await imageBlob.arrayBuffer();
-          await writeBinaryFile(image.realPath, new Uint8Array(buffer));
-        }
-
-        const fileNameWithoutExt = image.realPath.substring(0, image.realPath.lastIndexOf('.'));
-        const captionPath = fileNameWithoutExt + '.txt';
-        await writeTextFile(captionPath, caption);
-      }
-      setChanged(false)
-    } else {
-      await downloadAsZip(selectedImages.length === 0 ? projectImages : selectedImages)
-      setChanged(false)
-    }
+    const useTauri = !!window.__TAURI_IPC__;
+    const targets = selectedImages.length === 0 ? projectImages : selectedImages;
+    await saveImages(targets, useTauri, () => setChanged(false));
   }
 
-  function handleDeleteTagFromProject(tag: TagStatistics) {
-    if (tag.count() >= 2) {
-      if (!confirm(`Delete tag ` + `"${tag.value()}" from ${tag.count()} images ?`)) {
-        return
-      }
-    }
 
-    setProjectImages((prev) => {
-      return prev.map(i => {
-        i.caption.deleteTag(tag.getTag())
-        return i
-      })
-    })
-    setSearchTags(searchTags.filter(t => t !== tag.value()))
-    setChanged(true)
-  }
 
-  function handleSaveCrop(image: DaggerImage, from: DaggerImage, asNew: boolean) {
-    setInCropMode(null)
-    setChanged(true)
 
-    if (asNew) {
-      // insert new image after current image
-      const index = projectImages.findIndex(i => i.fileName === from.fileName)
-      console.log(index)
-      setProjectImages((prev) => {
-        const newImages = [...prev]
-        newImages.splice(index + 1, 0, image)
-        return newImages
-      })
-    } else {
-      // replace current image
-      setProjectImages((prev) => {
-        const newImages = [...prev]
-        const index = prev.findIndex(i => i.fileName === from.fileName)
-        newImages[index] = image
-        return newImages
-      })
-      setLoaded((prev) => prev - 1)
-    }
-
-    setSelectedImages([image])
-  }
-
-  function handleDeleteImageFromProject(images: DaggerImage[]) {
-    if (images.length > 1 && !confirm(`Remove ${images.length} images from project?`)) return
-    setProjectImages((prev) => {
-      return prev.filter(i => images.find(img => img.id === i.id) === undefined)
-    })
-    setLoaded(prevLoaded => prevLoaded - images.length)
-    setSelectedImages([])
-    setChanged(true)
-  }
-
-  function handleClearAllImages() {
-    if (projectImages.length === 0) return;
-    if (!confirm(`Are you sure you want to clear all ${projectImages.length} images?`)) return;
-    setProjectImages([])
-    setLoaded(0)
-    setSelectedImages([])
-    setCurrentImages([])
-    setProjectTags([])
-    setSearchTags([])
-    setIgnoreTags([])
-    setLastClickedImage(null)
-    setChanged(false)
-  }
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     handleFileOpen(acceptedFiles)
@@ -475,7 +275,7 @@ export default function Home() {
           >
             <ul className="overflow-y-auto overflow-x-hidden" {...getRootProps()}>
               <input {...getInputProps()} />
-              <ProjectFile handleOpenImage={handleOpenImage}
+              <ProjectFile handleOpenImage={handleOpenImageWrapped}
                 selectedImages={selectedImages}
                 currentImages={currentImages}
                 images={projectImages}
