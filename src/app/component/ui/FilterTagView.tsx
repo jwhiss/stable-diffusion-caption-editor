@@ -1,6 +1,4 @@
-import React from "react";
 import {DismissRegular} from "@fluentui/react-icons";
-
 export interface FilterTagViewProps {
   handleRemoveTagFromFilter: (tag: string) => void
   tags: string[]

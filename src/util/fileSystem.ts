@@ -20,10 +20,9 @@ export async function saveImages(
         await writeBinaryFile(image.realPath, new Uint8Array(buffer));
       }
 
-      const fileNameWithoutExt = image.realPath.substring(
-        0,
-        image.realPath.lastIndexOf(".")
-      );
+      const extIndex = image.realPath.lastIndexOf(".");
+      const fileNameWithoutExt =
+        extIndex > 0 ? image.realPath.substring(0, extIndex) : image.realPath;
       const captionPath = fileNameWithoutExt + ".txt";
       await writeTextFile(captionPath, caption);
     }

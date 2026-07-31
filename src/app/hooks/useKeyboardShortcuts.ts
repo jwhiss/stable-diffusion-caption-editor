@@ -37,7 +37,8 @@ export function useKeyboardShortcuts({
       if (e.key === "Control") {
         setCtrlMode(true);
       }
-      if (e.key === "a" && ctrlMode) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") {
+        e.preventDefault();
         e.stopPropagation();
         setSelectedImages(currentImages);
       }

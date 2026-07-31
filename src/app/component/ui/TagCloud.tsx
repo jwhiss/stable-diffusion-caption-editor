@@ -1,7 +1,5 @@
 import {TagStatistics} from "@/domain/data";
 import {DismissRegular} from "@fluentui/react-icons";
-import React from "react";
-
 export interface TagCloudProps {
   tagStatistics: TagStatistics[]
   handleTagSelect: (tag: TagStatistics | null) => void,

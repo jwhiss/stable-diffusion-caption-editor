@@ -1,6 +1,5 @@
 import {TagStatistics, DaggerImage} from "@/domain/data";
 import {useState} from "react";
-import {DismissRegular} from "@fluentui/react-icons";
 import {TagCloud} from "@/app/component/ui/TagCloud";
 
 interface TagViewProps {

@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { DaggerImage, Tag, TagStatistics } from "@/domain/data";
-import { findCaptionFileByImageName, isCaptionFile, isImageFile } from "@/util/util";
 
 export function useProjectState() {
   const [projectImages, setProjectImages] = useState<DaggerImage[]>([]);
@@ -38,22 +37,23 @@ export function useProjectState() {
       return;
     }
 
-    const prev: TagStatistics[] = [];
+    const nextTags: TagStatistics[] = [];
     for (const image of projectImages) {
       if (!image.isLoaded) {
         continue;
       }
       for (const tag of image.caption.asTag()) {
-        const tagStat = prev.find((t) => t.value() === tag.value());
+        const tagStat = nextTags.find((t) => t.value() === tag.value());
         if (tagStat) {
           tagStat.increment();
         } else {
-          prev.push(new TagStatistics(tag, 1));
+          nextTags.push(new TagStatistics(tag, 1));
         }
       }
-      prev.sort((a, b) => b.count() - a.count());
-      setProjectTags(prev);
     }
+
+    nextTags.sort((a, b) => b.count() - a.count());
+    setProjectTags(nextTags);
   }, [loaded, projectImages]);
 
   function handleDeleteImageFromProject(images: DaggerImage[]) {
@@ -134,7 +134,7 @@ export function useProjectState() {
       for (const image of images) {
         image.caption.addTag(tag);
       }
-      setProjectImages([...projectImages]);
+      setProjectImages((prev) => [...prev]);
       setChanged(true);
     };
   }

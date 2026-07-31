@@ -1,5 +1,4 @@
 import {DaggerImage} from "@/domain/data";
-import React from "react";
 
 export function ImageCard({img, handler, isCurrent, visible, size}: {
   img: DaggerImage,
@@ -19,7 +18,7 @@ export function ImageCard({img, handler, isCurrent, visible, size}: {
          }}
          onDoubleClick={(e) => {
            e.stopPropagation();
-           window.open(img.url, '_blank')
+           window.open(img.url, "_blank", "noopener,noreferrer")
          }}
     >
       <div

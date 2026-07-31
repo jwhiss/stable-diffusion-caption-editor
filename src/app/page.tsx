@@ -4,7 +4,7 @@ import { open } from '@tauri-apps/api/dialog';
 import ProjectFile from "@/app/component/project";
 import ImageViewArea from "@/app/component/view";
 import ToolBar from "@/app/component/tool";
-import { DaggerImage, Tag, TagStatistics } from "@/domain/data";
+import { DaggerImage, TagStatistics } from "@/domain/data";
 import 'react-image-crop/dist/ReactCrop.css';
 import TagView from "@/app/component/tag";
 import { useCallback, useEffect, useState } from "react";
@@ -14,7 +14,6 @@ import {
   isImageFile,
   readImageWithCaptionFiles
 } from "@/util/util";
-import { downloadAsZip } from "@/util/zip";
 import Split from "react-split";
 import CropViewArea from "@/app/component/crop";
 import { useDropzone } from "react-dropzone";
@@ -59,7 +58,6 @@ export default function Home() {
   const [layoutMode, setLayoutMode] = useState<'view' | 'edit'>('view')
 
 
-  const enableTagCloud = true
 
   useEffect(() => {
     if (typeof window !== 'undefined') {

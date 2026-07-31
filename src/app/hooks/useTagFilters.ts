@@ -37,9 +37,7 @@ export function useTagFilters({
       }
     }
     setCurrentImages(showImages);
-    if (showImages.length !== 0) {
-      setSelectedImages([showImages[0]]);
-    }
+    setSelectedImages(showImages.length > 0 ? [showImages[0]] : []);
   }, [searchTags, ignoreTags, projectImages, setCurrentImages, setSelectedImages]);
 
   return {

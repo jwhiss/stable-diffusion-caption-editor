@@ -1,7 +1,5 @@
 import {Tag} from "@/domain/data";
 import {DismissRegular} from "@fluentui/react-icons";
-import React from "react";
-
 export function TagSelector(props: { tag: Tag, selected: boolean, handleDeleteTagFromImage: (tag: Tag) => void }) {
   let className = "flex border bg-neutral-900 border-neutral-600 rounded-2xl p-1 pl-2 pr-2 m-1 text-sm"
   if (props.selected) {
