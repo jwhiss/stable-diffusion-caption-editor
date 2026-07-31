@@ -1,168 +1,109 @@
 "use client"
 
-import {open} from '@tauri-apps/api/dialog';
+import { open } from '@tauri-apps/api/dialog';
 import ProjectFile from "@/app/component/project";
 import ImageViewArea from "@/app/component/view";
 import ToolBar from "@/app/component/tool";
-import {DaggerImage, Tag, TagStatistics} from "@/domain/data";
+import { DaggerImage, TagStatistics } from "@/domain/data";
 import 'react-image-crop/dist/ReactCrop.css';
 import TagView from "@/app/component/tag";
-import {useCallback, useEffect, useState} from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   findCaptionFileByImageName,
   isCaptionFile,
   isImageFile,
   readImageWithCaptionFiles
 } from "@/util/util";
-import {downloadAsZip} from "@/util/zip";
 import Split from "react-split";
 import CropViewArea from "@/app/component/crop";
-import {useDropzone} from "react-dropzone";
+import { useDropzone } from "react-dropzone";
+import { useKeyboardShortcuts } from "@/app/hooks/useKeyboardShortcuts";
+import { useTagFilters } from "@/app/hooks/useTagFilters";
+import { useProjectState } from "@/app/hooks/useProjectState";
+import { saveImages } from "@/util/fileSystem";
 
 export default function Home() {
-  const [projectImages, setProjectImages] = useState<DaggerImage[]>([])
+  const {
+    projectImages,
+    setProjectImages,
+    selectedImages,
+    setSelectedImages,
+    projectTags,
+    loaded,
+    changed,
+    setChanged,
+    lastClickedImage,
+    setLastClickedImage,
+    inCropMode,
+    setInCropMode,
+    handleDeleteImageFromProject,
+    handleClearAllImages,
+    handleSaveCrop,
+    handleDeleteTagFromProject,
+    handleDeleteTagFromImage,
+    handleAddTagToImage,
+    handleOpenImage,
+  } = useProjectState();
+
   const [currentImages, setCurrentImages] = useState<DaggerImage[]>([])
-  const [selectedImages, setSelectedImages] = useState<DaggerImage[]>([])
-  const [projectTags, setProjectTags] = useState<TagStatistics[]>([])
-  const [loaded, setLoaded] = useState(0)
   const [shiftMode, setShiftMode] = useState(false)
-  const [lastClickedImage, setLastClickedImage] = useState<DaggerImage | null>(null)
   const [ctrlMode, setCtrlMode] = useState(false)
   const [taggingMode, setTaggingMode] = useState(false)
   const [taggingTags, setTaggingTags] = useState<string[]>([])
-  const [searchTags, setSearchTags] = useState<string[]>([])
-  const [ignoreTags, setIgnoreTags] = useState<string[]>([])
-  const [changed, setChanged] = useState(false)
-  const [inCropMode, setInCropMode] = useState<DaggerImage | null>(null)
-  const [lastLoadedImage, setLastLoadedImage] = useState<DaggerImage | null>(null)
+  const { searchTags, setSearchTags, ignoreTags, setIgnoreTags } = useTagFilters({
+    projectImages,
+    setCurrentImages,
+    setSelectedImages,
+  })
+  const [layoutMode, setLayoutMode] = useState<'view' | 'edit'>('view')
 
 
-  const enableTagCloud = true
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.addEventListener('beforeunload', (event) => {
-        if (changed) {
-          event.preventDefault();
-          event.returnValue = '';
-        }
-      })
-      window.addEventListener('blur', () => {
-        setCtrlMode(false)
-        setShiftMode(false)
-      })
-    }
+    if (typeof window === 'undefined') return;
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (changed) {
+        event.preventDefault();
+        event.returnValue = '';
+      }
+    };
+
+    const handleBlur = () => {
+      setCtrlMode(false);
+      setShiftMode(false);
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('blur', handleBlur);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('blur', handleBlur);
+    };
   }, [changed]);
 
-  useEffect(() => {
-    const loadingImages = projectImages.filter(image => !image.isLoaded)
-    const loadedImage = projectImages.filter(image => image.isLoaded)
-
-    for (const image of loadingImages) {
-      if (!image.isLoaded) {
-        image.asyncLoad().then(() => {
-          setLastLoadedImage(image)
-        })
-      }
-    }
-
-    setLoaded(() => loadedImage.length)
-  }, [loaded, projectImages, lastLoadedImage])
-
-  useEffect(() => {
-    if (projectImages.length === 0) {
-      setProjectTags([])
-    }
-
-    if (!enableTagCloud || loaded !== projectImages.length) {
-      return
-    }
-
-    const prev: TagStatistics[] = []
-    for (const image of projectImages) {
-      if (!image.isLoaded) {
-        continue
-      }
-      for (const tag of image.caption.asTag()) {
-        const tagStat = prev.find(t => t.value() === tag.value())
-        if (tagStat) {
-          tagStat.increment()
-        } else {
-          prev.push(new TagStatistics(tag, 1))
-        }
-      }
-      prev.sort((a, b) => b.count() - a.count())
-      setProjectTags(prev)
-    }
-  }, [loaded, projectImages])
 
 
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Shift") {
-        if (!lastClickedImage) {
-          setLastClickedImage(selectedImages[selectedImages.length - 1])
-        }
-        setShiftMode(true)
-      }
-      if (e.key === "Control") {
-        setCtrlMode(true)
-      }
-      if (e.key === "a" && ctrlMode) {
-        e.stopPropagation()
-        setSelectedImages(currentImages)
-      }
-      if (e.key === "Enter") {
-        // e.stopPropagation()
-        // if (inputRef.current) {
-        //   inputRef.current.focus()
-        // }
-      }
-      if (e.key === "Delete") {
-        handleDeleteImageFromProject(selectedImages)
-      }
-    }
 
-    function handleKeyUp(e: KeyboardEvent) {
-      if (e.key === "Shift") {
-        setShiftMode(false)
-      }
-      if (e.key === "Control") {
-        setCtrlMode(false)
-      }
-    }
+  useKeyboardShortcuts({
+    lastClickedImage,
+    setLastClickedImage,
+    selectedImages,
+    setSelectedImages,
+    currentImages,
+    shiftMode,
+    setShiftMode,
+    ctrlMode,
+    setCtrlMode,
+    handleDeleteImageFromProject,
+  });
 
-    document.onkeyup = handleKeyUp
-    document.onkeydown = handleKeyDown
-  }, [shiftMode, ctrlMode, selectedImages])
-
-  useEffect(() => {
-    const anySelectedTags = searchTags.length !== 0 || ignoreTags.length !== 0
-    if (!anySelectedTags) {
-      setCurrentImages(projectImages)
-      return
-    }
-
-    const showImages: DaggerImage[] = []
-    for (const image of projectImages) {
-      const isSearchTarget = searchTags.every(t => image.caption.asTag().find(tag => tag.value() === t))
-      const isIgnoreTarget = ignoreTags.some(t => image.caption.asTag().find(tag => tag.value() === t))
-      const shouldShow = (isSearchTarget && !isIgnoreTarget)
-
-      if (shouldShow) {
-        showImages.push(image)
-      }
-    }
-    setCurrentImages(showImages)
-    if (showImages.length !== 0) {
-      setSelectedImages([showImages[0]])
-    }
-  }, [searchTags, ignoreTags, projectImages])
 
   function handleOpenDirectory() {
     // @ts-ignore
     if (window.__TAURI_IPC__) {
-      open({multiple: true, directory: false})
+      open({ multiple: true, directory: false })
         .then(str => {
           if (!str) return
           if (Array.isArray(str)) {
@@ -206,34 +147,8 @@ export default function Home() {
   }
 
 
-  function handleOpenImage(image: DaggerImage | null) {
-    if ((shiftMode || ctrlMode) && !image) {
-      return;
-    }
-
-    if (!image) {
-      setSelectedImages([])
-      return
-    }
-
-    if (ctrlMode) {
-      if (selectedImages.find(i => i === image)) {
-        setSelectedImages(selectedImages.filter(i => i !== image))
-      } else {
-        setSelectedImages([...selectedImages, image])
-      }
-    } else {
-      setSelectedImages([image])
-    }
-
-    if (lastClickedImage && shiftMode) {
-      const startIndex = projectImages.findIndex(i => i === lastClickedImage)
-      const endIndex = projectImages.findIndex(i => i === image)
-      const newCurrentImages = projectImages.slice(Math.min(startIndex, endIndex), Math.max(startIndex, endIndex) + 1)
-      setSelectedImages(newCurrentImages.filter(i => currentImages.find(s => s === i)))
-    } else {
-      setLastClickedImage(image)
-    }
+  function handleOpenImageWrapped(image: DaggerImage | null) {
+    handleOpenImage(image, shiftMode, ctrlMode, currentImages);
   }
 
   function handleTagSelect(tag: TagStatistics | null) {
@@ -284,31 +199,7 @@ export default function Home() {
     }
   }
 
-  function handleDeleteTagFromImage(images: DaggerImage[]) {
-    return (tag: Tag) => {
-      setProjectImages((prev) => {
-        return prev.map(i => {
-          if (images.find(img => img === i)) {
-            i.caption.deleteTag(tag)
-          }
-          return i
-        })
-      })
 
-      setChanged(true)
-    }
-  }
-
-
-  function handleAddTagToImage(images: DaggerImage[]) {
-    return (tag: string) => {
-      for (const image of images) {
-        image.caption.addTag(tag)
-      }
-      setProjectImages([...projectImages])
-      setChanged(true)
-    }
-  }
 
   function handleToggleTaggingMode(bool: boolean) {
     setTaggingMode(bool)
@@ -323,72 +214,32 @@ export default function Home() {
     }
   }
 
-  async function handleFileSaveAsZip() {
-    await downloadAsZip(selectedImages.length === 0 ? projectImages : selectedImages)
-    setChanged(false)
+  async function handleFileSave() {
+    // @ts-ignore
+    const useTauri = !!window.__TAURI_IPC__;
+    const targets = selectedImages.length === 0 ? projectImages : selectedImages;
+    await saveImages(targets, useTauri, () => setChanged(false));
   }
 
-  function handleDeleteTagFromProject(tag: TagStatistics) {
-    if (tag.count() >= 2) {
-      if (!confirm(`Delete tag ` + `"${tag.value()}" from ${tag.count()} images ?`)) {
-        return
-      }
-    }
 
-    setProjectImages((prev) => {
-      return prev.map(i => {
-        i.caption.deleteTag(tag.getTag())
-        return i
-      })
-    })
-    setSearchTags(searchTags.filter(t => t !== tag.value()))
-    setChanged(true)
-  }
 
-  function handleSaveCrop(image: DaggerImage, from: DaggerImage, asNew: boolean) {
-    setInCropMode(null)
-    setChanged(true)
 
-    if (asNew) {
-      // insert new image after current image
-      const index = projectImages.findIndex(i => i.fileName === from.fileName)
-      console.log(index)
-      setProjectImages((prev) => {
-        const newImages = [...prev]
-        newImages.splice(index + 1, 0, image)
-        return newImages
-      })
-    } else {
-      // replace current image
-      setProjectImages((prev) => {
-        const newImages = [...prev]
-        const index = prev.findIndex(i => i.fileName === from.fileName)
-        newImages[index] = image
-        return newImages
-      })
-      setLoaded((prev) => prev - 1)
-    }
-
-    setSelectedImages([image])
-  }
-
-  function handleDeleteImageFromProject(images: DaggerImage[]) {
-    if (images.length > 1 && !confirm(`Remove ${images.length} images from project?`)) return
-    setProjectImages((prev) => {
-      return prev.filter(i => images.find(img => img.id === i.id) === undefined)
-    })
-    setLoaded(prevLoaded => prevLoaded - images.length)
-    setSelectedImages([])
-    setChanged(true)
-  }
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     handleFileOpen(acceptedFiles)
   }, []);
 
-  const {getRootProps, getInputProps} = useDropzone({onDrop, noClick: true});
+  const { getRootProps, getInputProps } = useDropzone({ onDrop, noClick: true });
 
   const overlayBaseCls = "flex justify-center items-center absolute h-screen w-screen bg-neutral-900 bg-opacity-70 z-10 p-10"
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
   return (
     <main className="flex font-mono h-screen min-w-screer text-neutral-50 select-none">
       <div
@@ -402,16 +253,16 @@ export default function Home() {
       <div className={overlayBaseCls + (inCropMode ? "" : " hidden")}>
         {
           inCropMode &&
-            <CropViewArea
-                daggerImage={inCropMode}
-                handleCancelCrop={() => setInCropMode(null)}
-                handleSaveCrop={handleSaveCrop}
-            />
+          <CropViewArea
+            daggerImage={inCropMode}
+            handleCancelCrop={() => setInCropMode(null)}
+            handleSaveCrop={handleSaveCrop}
+          />
         }
       </div>
 
       <div className="flex min-h-screen flex-col w-[48px] p-1 bg-neutral-800 border-neutral-950 border-r">
-        <ToolBar handleOpenDirectory={handleOpenDirectory} handleSaveAsZip={handleFileSaveAsZip}></ToolBar>
+        <ToolBar handleOpenDirectory={handleOpenDirectory} handleSave={handleFileSave} layoutMode={layoutMode} setLayoutMode={setLayoutMode} handleClearAllImages={handleClearAllImages}></ToolBar>
       </div>
 
       <Split
@@ -439,42 +290,46 @@ export default function Home() {
           >
             <ul className="overflow-y-auto overflow-x-hidden" {...getRootProps()}>
               <input {...getInputProps()} />
-              <ProjectFile handleOpenImage={handleOpenImage}
-                           selectedImages={selectedImages}
-                           currentImages={currentImages}
-                           images={projectImages}
-                           searchTags={searchTags}
-                           ignoreTags={ignoreTags}
-                           shiftMode={shiftMode}
-                           ctrlMode={ctrlMode}
-                           setCtrlMode={setCtrlMode}
-                           setShiftMode={setShiftMode}
-                           handleRemoveTagFromFilter={handleRemoveTagFromFilter}
+              <ProjectFile handleOpenImage={handleOpenImageWrapped}
+                selectedImages={selectedImages}
+                currentImages={currentImages}
+                images={projectImages}
+                searchTags={searchTags}
+                ignoreTags={ignoreTags}
+                shiftMode={shiftMode}
+                ctrlMode={ctrlMode}
+                setCtrlMode={setCtrlMode}
+                setShiftMode={setShiftMode}
+                handleRemoveTagFromFilter={handleRemoveTagFromFilter}
               />
             </ul>
             <ul className="flex overflow-hidden">
               <TagView tagStatistics={projectTags}
-                       toggleFilterMode={() => setTaggingMode(false)}
-                       handleToggleTaggingTags={handleToggleTaggingTags}
-                       searchTags={searchTags}
-                       ignoreTags={ignoreTags}
-                       ctrlMode={ctrlMode}
-                       handleTagSelect={handleTagSelect}
-                       toggleTaggingMode={handleToggleTaggingMode}
-                       isTaggingMode={taggingMode}
-                       taggingTags={taggingTags}
-                       handleDeleteTagFromProject={handleDeleteTagFromProject}
+                toggleFilterMode={() => setTaggingMode(false)}
+                handleToggleTaggingTags={handleToggleTaggingTags}
+                searchTags={searchTags}
+                ignoreTags={ignoreTags}
+                ctrlMode={ctrlMode}
+                handleTagSelect={handleTagSelect}
+                toggleTaggingMode={handleToggleTaggingMode}
+                isTaggingMode={taggingMode}
+                taggingTags={taggingTags}
+                handleDeleteTagFromProject={handleDeleteTagFromProject}
+                layoutMode={layoutMode}
+                selectedImages={selectedImages}
+                handleAddTagToSelectedImages={handleAddTagToImage(selectedImages)}
+                handleRemoveTagFromSelectedImages={(t) => handleDeleteTagFromImage(selectedImages)(t.getTag())}
               />
             </ul>
           </Split>
         </ul>
         <ul>
-          <div className="flex h-screen w-full flex-col bg-neutral-800 overflow-y-auto">
+          <div className="flex h-screen w-full flex-col bg-neutral-800 overflow-hidden">
             <ImageViewArea daggerImages={selectedImages}
-                           handleDeleteTagFromImage={handleDeleteTagFromImage}
-                           handleAddTagToImage={handleAddTagToImage}
-                           setInCropMode={(img) => setInCropMode(img)}
-                           handleDeleteImageFromProject={handleDeleteImageFromProject}
+              handleDeleteTagFromImage={handleDeleteTagFromImage}
+              handleAddTagToImage={handleAddTagToImage}
+              setInCropMode={(img) => setInCropMode(img)}
+              handleDeleteImageFromProject={handleDeleteImageFromProject}
             />
           </div>
         </ul>

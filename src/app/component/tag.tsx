@@ -1,6 +1,6 @@
-import {TagStatistics} from "@/domain/data";
+import {TagStatistics, DaggerImage} from "@/domain/data";
 import {useState} from "react";
-import {DismissRegular} from "@fluentui/react-icons";
+import {TagCloud} from "@/app/component/ui/TagCloud";
 
 interface TagViewProps {
   tagStatistics: TagStatistics[]
@@ -14,22 +14,43 @@ interface TagViewProps {
   taggingTags: string[]
   searchTags: string[]
   ignoreTags: string[]
+  layoutMode: 'view' | 'edit'
+  selectedImages: DaggerImage[]
+  handleAddTagToSelectedImages: (tag: string) => void
+  handleRemoveTagFromSelectedImages: (tag: TagStatistics) => void
 }
 
 export default function TagView(props: TagViewProps) {
   const [tagSearch, setTagSearch] = useState<string>("")
+  const [editAction, setEditAction] = useState<'add' | 'remove'>('add')
   const filterMode = !props.isTaggingMode
+
+  const addTags = props.tagStatistics.filter(t => {
+    if (props.selectedImages.length === 0) return false;
+    return props.selectedImages.some(img => !img.caption.asTag().find(tag => tag.value() === t.value()))
+  }).filter(t => t.value().includes(tagSearch));
+
+  const removeTags = props.tagStatistics.filter(t => {
+    if (props.selectedImages.length === 0) return false;
+    return props.selectedImages.some(img => img.caption.asTag().find(tag => tag.value() === t.value()))
+  }).filter(t => t.value().includes(tagSearch));
 
   return (
     <div className="flex flex-col pl-4 w-full pt-2 bg-neutral-800 overflow-hidden select-none">
       <div className="flex pb-2 justify-between">
-        <div className="">
-          <button className={"" + (filterMode && "border-b border-sky-500")}
-                  onClick={() => props.toggleFilterMode(true)}>FILTER BY TAGS
-          </button>
-          {/*<button className={"ml-4 " + (taggingMode && "border-b border-sky-500")}*/}
-          {/*        onClick={() => props.toggleTaggingMode(true)}>CLICK TAGGING*/}
-          {/*</button>*/}
+        <div className="flex gap-4">
+          {props.layoutMode === 'view' ? (
+            <button className={filterMode ? "text-white border-b border-sky-500" : "text-neutral-400"}
+                    onClick={() => props.toggleFilterMode(true)}>FILTER BY TAGS
+            </button>
+          ) : (
+            <>
+              <button className={editAction === 'add' ? "text-white border-b border-sky-500" : "text-neutral-400"}
+                      onClick={() => setEditAction('add')}>ADD TAGS</button>
+              <button className={editAction === 'remove' ? "text-white border-b border-sky-500" : "text-neutral-400"}
+                      onClick={() => setEditAction('remove')}>REMOVE TAGS</button>
+            </>
+          )}
         </div>
         <div className="pr-4">
           <input placeholder={"Search"}
@@ -42,81 +63,37 @@ export default function TagView(props: TagViewProps) {
 
       <div className="w-full overflow-y-auto">
         {
-          filterMode ?
-            <TagCloud tagStatistics={props.tagStatistics.filter((t: TagStatistics) => t.value().includes(tagSearch))}
-                      ignoreTags={props.ignoreTags}
-                      searchTags={props.searchTags}
-                      handleTagSelect={props.handleTagSelect}
-                      ctrlMode={props.ctrlMode}
-                      handleDeleteTagFromProject={props.handleDeleteTagFromProject}
+          props.layoutMode === 'view' ? (
+            filterMode ?
+              <TagCloud tagStatistics={props.tagStatistics.filter((t: TagStatistics) => t.value().includes(tagSearch))}
+                        ignoreTags={props.ignoreTags}
+                        searchTags={props.searchTags}
+                        handleTagSelect={props.handleTagSelect}
+                        ctrlMode={props.ctrlMode}
+                        handleDeleteTagFromProject={props.handleDeleteTagFromProject}
+              />
+              :
+              <></>
+          ) : (
+            <TagCloud tagStatistics={editAction === 'add' ? addTags : removeTags}
+                      ignoreTags={[]}
+                      searchTags={[]}
+                      handleTagSelect={(t) => {
+                        if (t) {
+                          if (editAction === 'add') {
+                            props.handleAddTagToSelectedImages(t.value());
+                          } else {
+                            props.handleRemoveTagFromSelectedImages(t);
+                          }
+                        }
+                      }}
+                      ctrlMode={false}
+                      handleDeleteTagFromProject={() => {}}
             />
-            :
-            <></>
+          )
         }
       </div>
 
-    </div>
-  )
-}
-
-function TaggingMode(props: {
-  tagStatistics: TagStatistics[]
-  handleTagSelect: (tag: TagStatistics | null) => void,
-}) {
-  return (
-    <div></div>
-  )
-}
-
-interface TagCloudProps {
-  tagStatistics: TagStatistics[]
-  handleTagSelect: (tag: TagStatistics | null) => void,
-  searchTags: string[]
-  ignoreTags: string[]
-  ctrlMode: boolean
-  handleDeleteTagFromProject: (tag: TagStatistics) => void,
-}
-
-function TagCloud(props: TagCloudProps) {
-  const tagCloudElm = props.tagStatistics.map((t: TagStatistics) => {
-    const isSearchTag = props.searchTags.includes(t.value())
-    const isIgnoreTag = props.ignoreTags.includes(t.value())
-
-    let clsName = "flex box-border border rounded-2xl p-1 pl-2 pr-2 m-1 select-none text-sm cursor-pointer hover:bg-neutral-800 "
-    if (isSearchTag) {
-      clsName += "bg-neutral-700 border-blue-600"
-    } else if (isIgnoreTag) {
-      clsName += "bg-neutral-700 border-red-500"
-    } else {
-      clsName += "bg-neutral-900 border-neutral-600"
-    }
-
-    const tagControlBaseCls = "relative left-1 flex w-8 justify-center items-center text-xs bg-neutral-800 rounded-full"
-    const tagCountOrDeleteButton = !props.ctrlMode ?
-      <div className={tagControlBaseCls}>{t.count()}</div> :
-      <div onClick={(e) => {e.stopPropagation(); props.handleDeleteTagFromProject(t)}}
-           className={tagControlBaseCls + " cursor-pointer hover:bg-red-500"}
-      >
-        <DismissRegular></DismissRegular>
-      </div>
-
-
-    return (
-      <div className={clsName} key={t.value()}
-        onClick={(e) => {
-          e.stopPropagation()
-          props.handleTagSelect(t)
-        }}
-      >
-        {t.value()}
-        {tagCountOrDeleteButton}
-      </div>
-    )
-  })
-
-  return (
-    <div className="flex flex-wrap">
-      {tagCloudElm}
     </div>
   )
 }
