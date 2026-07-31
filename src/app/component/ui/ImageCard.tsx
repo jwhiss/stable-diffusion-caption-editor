@@ -1,6 +1,6 @@
-import {DaggerImage} from "@/domain/data";
+import { DaggerImage } from "@/domain/data";
 
-export function ImageCard({img, handler, isCurrent, visible, size}: {
+export function ImageCard({ img, handler, isCurrent, visible, size }: {
   img: DaggerImage,
   isCurrent: boolean,
   handler: (img: DaggerImage) => void
@@ -11,19 +11,19 @@ export function ImageCard({img, handler, isCurrent, visible, size}: {
   if (!visible) cls += " hidden"
 
   return (
-    <div className={cls} style={{width: `${size}px`, height: `${size + 40}px`}}
-         onMouseDown={(e) => {
-           e.stopPropagation();
-           handler(img)
-         }}
-         onDoubleClick={(e) => {
-           e.stopPropagation();
-           window.open(img.url, "_blank", "noopener,noreferrer")
-         }}
+    <div className={cls} style={{ width: `${size}px`, height: `${size + 40}px` }}
+      onMouseDown={(e) => {
+        e.stopPropagation();
+        handler(img)
+      }}
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        window.open(img.url, "_blank", "noopener,noreferrer")
+      }}
     >
       <div
         className={`flex justify-center m-1 overflow-hidden shrink-0 items-center ` + (isCurrent ? "border-sky-500 border-2" : "")}
-        style={{height: `${size}px`}}>
+        style={{ height: `${size}px` }}>
         <img className={"object-cover pointer-events-none"} onDragStart={(e) => e.stopPropagation()} src={img.thumbnailUrl} alt={img.caption.value}></img>
       </div>
       <div className="flex justify-center text-sm pt-2">

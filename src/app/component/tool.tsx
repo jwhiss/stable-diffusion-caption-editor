@@ -47,7 +47,7 @@ export default function ToolBar(props: { handleOpenDirectory: () => void, handle
           className="cursor-pointer rounded p-1 hover:bg-neutral-700"
         >
           <Image src="github-mark-white.png" alt="github" width="32" height="32"
-            onClick={() => window.open("https://github.com/kznrluk/dagger", "_blank")}
+            onClick={() => window.open("https://github.com/jwhiss/stable-diffusion-caption-editor", "_blank", "noopener,noreferrer")}
           />
         </div>
       </div>

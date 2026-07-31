@@ -60,18 +60,27 @@ export default function Home() {
 
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.addEventListener('beforeunload', (event) => {
-        if (changed) {
-          event.preventDefault();
-          event.returnValue = '';
-        }
-      })
-      window.addEventListener('blur', () => {
-        setCtrlMode(false)
-        setShiftMode(false)
-      })
-    }
+    if (typeof window === 'undefined') return;
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (changed) {
+        event.preventDefault();
+        event.returnValue = '';
+      }
+    };
+
+    const handleBlur = () => {
+      setCtrlMode(false);
+      setShiftMode(false);
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('blur', handleBlur);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('blur', handleBlur);
+    };
   }, [changed]);
 
 
@@ -223,6 +232,14 @@ export default function Home() {
   const { getRootProps, getInputProps } = useDropzone({ onDrop, noClick: true });
 
   const overlayBaseCls = "flex justify-center items-center absolute h-screen w-screen bg-neutral-900 bg-opacity-70 z-10 p-10"
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
   return (
     <main className="flex font-mono h-screen min-w-screer text-neutral-50 select-none">
       <div
