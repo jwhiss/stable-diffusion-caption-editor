@@ -1,5 +1,4 @@
-import React from "react";
-import {ShortcutIcon} from "@/app/component/ui/ShortcutIcon";
+import { ShortcutIcon } from "@/app/component/ui/ShortcutIcon";
 
 export function Promotion() {
   return (
@@ -10,8 +9,7 @@ export function Promotion() {
         <p>Get started by importing your image and caption files.</p>
       </div>
       <div className="text-lg">
-        <p>Please see the <a className="underline" href="https://github.com/kznrluk/dagger">README</a> for detailed usage instructions.</p>
-        <p>We welcome your contributions and feedback. Please feel free to submit issues and pull requests on our <a className="underline" href="https://github.com/kznrluk/dagger">GitHub repository</a>.</p>
+        <p>Please see the <a className="underline" href="https://github.com/jwhiss/stable-diffusion-caption-editor">README</a> for detailed usage instructions.</p>
       </div>
       <div className="flex flex-col gap-2 text-center">
         <ShortcutIcon name="CTRL + Click" description="Select multiple" />
